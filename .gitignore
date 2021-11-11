@@ -1,0 +1,10 @@
+/go.sum
+/*.rest
+/*.json
+/*.cmd
+/*.txt
+/*.exe
+/*-pid
+
+/log/
+*.log
