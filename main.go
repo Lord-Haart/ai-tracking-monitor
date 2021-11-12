@@ -24,15 +24,13 @@ const (
 	AppName    string = "tracking-monitor" // 表示应用程序名。
 	AppVersion string = "0.1.0"            // 表示应用程序版本。
 
-	DefaultConfigFile    string = "./" + AppName + ".json" // 表示默认的配置文件名。
-	DefaultListenAddress string = ":8001"                  // 表示默认的监听地址。
-	DefaultDebug         bool   = false                    // 表示默认是否开启Debug模式。
-	DefaultTimeout       int    = 30                       // 表示默认的请求超时秒数。
+	DefaultConfigFile string = "./" + AppName + ".json" // 表示默认的配置文件名。
+	DefaultDebug      bool   = false                    // 表示默认是否开启Debug模式。
 
 	DefaultRedisHost     string = "localhost" // 表示默认的Redis主机地址。
 	DefaultRedisPort     int    = 6379        // 表示默认的Redis端口号。
 	DefaultRedisPassword string = ""          // 表示默认的Redis口令。
-	DefaultRedisDB       int    = 1           // 表示默认的Redis数据库。
+	DefaultRedisDB       int    = 0           // 表示默认的Redis数据库。
 )
 
 var (
@@ -42,8 +40,6 @@ var (
 	flagDebug   bool // 是否显示调试信息
 
 	configuration *Configuration = &Configuration{
-		Listen:  DefaultListenAddress,
-		Timeout: DefaultTimeout,
 		Redis: RedisConfiguration{
 			Host:     DefaultRedisHost,
 			Port:     DefaultRedisPort,
@@ -157,14 +153,6 @@ func loadConfig(configFile string) (err error) {
 		return err
 	}
 
-	// 检查服务绑定地址的格式是否正确。
-	configuration.Listen = strings.ToLower(strings.TrimSpace(configuration.Listen))
-	if configuration.Listen == "" || configuration.Listen == ":" {
-		configuration.Listen = DefaultListenAddress
-	} else if !strings.HasPrefix(configuration.Listen, ":") {
-		return fmt.Errorf("listen address should start with colon(:), do you prefer %v ?", ":"+configuration.Listen)
-	}
-
 	// 检查数据库DSN的格式是否正确。
 	configuration.DB.DSN = strings.TrimSpace(configuration.DB.DSN)
 	if configuration.DB.DSN == "" || !strings.Contains(configuration.DB.DSN, "@") || !strings.Contains(configuration.DB.DSN, ":") {
@@ -212,18 +200,16 @@ func runForEver() error {
 
 func doRun() {
 	// TODO: 通过配置文件设置轮询周期。
-	dr := 5 * time.Minute
+	timer := time.NewTimer(5 * time.Second)
 
-	timer := time.NewTimer(dr)
+	fmt.Printf("Checking... \n")
 
 	for {
 		<-timer.C
-		timer.Reset(dr)
+		timer.Reset(5 * time.Minute)
 
 		go func() {
 			defer _utils.RecoverPanic()
-
-			log.Printf("[INFO] Check agent(s)\n")
 
 			doCheck()
 		}()

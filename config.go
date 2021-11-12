@@ -5,9 +5,6 @@ package main
 
 // Configuration 表示全局配置对象。
 type Configuration struct {
-	Listen  string // 提供服务的绑定地址。
-	Timeout int    // 读取和写入的超时（秒）
-
 	DB DBConfiguration // 数据库设置。
 
 	Redis RedisConfiguration // Redis配置。

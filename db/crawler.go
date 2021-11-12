@@ -45,6 +45,7 @@ where ci.status = 1
 	and tci.service_status = 1
 	and tci.start_time <= ?
 	and tci.end_time >= ?
+	and tci.type <> 'JAVA'
 	order by tci.id, tci.priority`
 )
 

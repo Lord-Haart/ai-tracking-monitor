@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	insertCrawlerHealthLog string = `insert into crawler_health_log (carrier_id, tracking_no, timing, result_status, create_time, update_time, status) 
+	insertCrawlerHealthLog string = `insert into crawler_health_log (crawler_id, tracking_no, timing, result_status, create_time, update_time, status) 
 	values(?, ?, ?, ?, ?, ?, ?)`
 )
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -35,6 +36,7 @@ func doCheck() {
 		if seqNo, err := _utils.NewSeqNo(); err != nil {
 			panic(err)
 		} else {
+			// fmt.Printf("%v\n", seqNo)
 			trackingSearchList = append(trackingSearchList, &_rpcclient.TrackingSearch{
 				ReqTime:     reqTime,
 				SeqNo:       seqNo,
@@ -71,9 +73,15 @@ func doCheck() {
 
 				crawlerInfo := findCrawlerInfo_(ts.CarrierCode)
 				if crawlerInfo != nil {
-					log.Printf("[INFO] %s(carrier-code=%s, tracking-no=%s) checked\n", crawlerInfo.Name, crawlerInfo.CarrierCode, crawlerInfo.HeartBeatNo)
+					if resultStatus != 0 {
+						log.Printf("[INFO] Crawler %s(carrier-code=%s, tracking-no=%s) is OK\n", crawlerInfo.Name, crawlerInfo.CarrierCode, crawlerInfo.HeartBeatNo)
+					} else {
+						log.Printf("[WARN] Crawler %s(carrier-code=%s, tracking-no=%s) has ERROR\n", crawlerInfo.Name, crawlerInfo.CarrierCode, crawlerInfo.HeartBeatNo)
+					}
 
-					_db.SaveHealthLog(crawlerInfo.CarrierId, ts.TrackingNo, int(timing), resultStatus, endTime)
+					_db.SaveHealthLog(crawlerInfo.Id, ts.TrackingNo, int(timing), resultStatus, endTime)
+				} else {
+					fmt.Printf("!!!! %s\n", ts.CarrierCode)
 				}
 			}
 		}
