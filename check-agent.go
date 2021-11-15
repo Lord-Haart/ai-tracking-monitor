@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -56,9 +55,24 @@ func doCheck() {
 			panic(err)
 		} else {
 			for _, ts := range trackingSearchList {
-				resultStatus := 0
-				if _agent.IsSuccess(ts.AgentCode) {
-					resultStatus = 1
+				// 注意：此处规则和接口查询不同，result_status=0表示成功；result_status=1表示失败！！！！
+				resultStatus := 1
+				resultNote := ""
+				if ts.AgentCode == _agent.AcSuccess || ts.AgentCode == _agent.AcSuccess2 {
+					resultStatus = 0
+				} else if ts.AgentCode == _agent.AcNoTracking {
+					resultStatus = 0
+					resultNote = "未查询到单号"
+				} else if ts.AgentCode == _agent.AcParseFailed {
+					resultNote = "无法解析目标网站页面"
+				} else if ts.AgentCode == _agent.AcTimeout {
+					resultNote = "查询目标网站超时"
+				} else {
+					resultNote = "未知错误"
+				}
+
+				if resultStatus == 1 && ts.Err != "" {
+					resultNote = resultNote + ": " + ts.Err
 				}
 
 				var timing int64
@@ -73,15 +87,13 @@ func doCheck() {
 
 				crawlerInfo := findCrawlerInfo_(ts.CarrierCode)
 				if crawlerInfo != nil {
-					if resultStatus != 0 {
-						log.Printf("[INFO] Crawler %s(carrier-code=%s, tracking-no=%s) is OK\n", crawlerInfo.Name, crawlerInfo.CarrierCode, crawlerInfo.HeartBeatNo)
+					if resultStatus == 0 {
+						log.Printf("[INFO] Crawler %s(crawler-id=%d, carrier-code=%s, tracking-no=%s) is OK\n", crawlerInfo.Name, crawlerInfo.Id, crawlerInfo.CarrierCode, crawlerInfo.HeartBeatNo)
 					} else {
-						log.Printf("[WARN] Crawler %s(carrier-code=%s, tracking-no=%s) has ERROR\n", crawlerInfo.Name, crawlerInfo.CarrierCode, crawlerInfo.HeartBeatNo)
+						log.Printf("[WARN] Crawler %s(crawler-id=%d, carrier-code=%s, tracking-no=%s) has ERROR\n", crawlerInfo.Name, crawlerInfo.Id, crawlerInfo.CarrierCode, crawlerInfo.HeartBeatNo)
 					}
 
-					_db.SaveHealthLog(crawlerInfo.Id, ts.TrackingNo, int(timing), resultStatus, endTime)
-				} else {
-					fmt.Printf("!!!! %s\n", ts.CarrierCode)
+					_db.SaveHealthLog(crawlerInfo.Id, ts.TrackingNo, int(timing), resultStatus, endTime, ts.AgentRawText, resultNote)
 				}
 			}
 		}
