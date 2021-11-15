@@ -32,7 +32,7 @@ type CrawlerInfoPo struct {
 }
 
 const (
-	selectAllCrawlerInfo string = `	select ci.id, ci.carrier_code, tci.id, tci.heart_beat_no,
+	selectAllCrawlerInfo string = `select ci.id, ci.carrier_code, tci.id, tci.heart_beat_no,
 	tci.name, tci.req_url, tci.type, tcp.req_url, tcp.req_method, tcp.req_headers, tcp.req_data, tcp.req_verify, tcp.req_json, tcp.req_proxy,
 	tcp.req_timeout, tcp.site_encrypt, tcp.tracking_field_name, tcp.tracking_field_type, tcp.site_crawling_name, tcp.site_analyzed_name
 from tracking_crawler_info  tci
@@ -47,6 +47,8 @@ where ci.status = 1
 	and tci.end_time >= ?
 	and tci.type <> 'JAVA'
 	order by tci.id, tci.priority`
+
+	updateCrawlerInfoHealth = `update tracking_crawler_info set result_status = ? where id = ?`
 )
 
 func QueryAllCrawlerInfos(datePoint time.Time) []*CrawlerInfoPo {
@@ -69,5 +71,17 @@ func QueryAllCrawlerInfos(datePoint time.Time) []*CrawlerInfoPo {
 		}
 
 		return result
+	}
+}
+
+func UpdateCrawlerInfoHealth(crawlerId int64, status int) int64 {
+	if result, err := db.Exec(updateCrawlerInfoHealth, status, crawlerId); err != nil {
+		panic(err)
+	} else {
+		if c, err := result.RowsAffected(); err != nil {
+			panic(err)
+		} else {
+			return c
+		}
 	}
 }

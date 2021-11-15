@@ -27,6 +27,16 @@ func doCheck() {
 		return nil
 	}
 
+	findCrawlerInfo2_ := func(crawlerId int64) *_db.CrawlerInfoPo {
+		for _, ci := range crawlerInfoList {
+			if ci.Id == crawlerId {
+				return ci
+			}
+		}
+
+		return nil
+	}
+
 	trackingSearchList := make([]*_rpcclient.TrackingSearch, 0)
 
 	reqTime := time.Now()
@@ -85,17 +95,41 @@ func doCheck() {
 
 				timing = endTime.Sub(ts.ReqTime).Milliseconds()
 
-				crawlerInfo := findCrawlerInfo_(ts.CarrierCode)
-				if crawlerInfo != nil {
+				if crawlerInfo := findCrawlerInfo_(ts.CarrierCode); crawlerInfo == nil {
+					continue
+				} else {
 					if resultStatus == 0 {
-						log.Printf("[INFO] Crawler %s(crawler-id=%d, carrier-code=%s, tracking-no=%s) is OK\n", crawlerInfo.Name, crawlerInfo.Id, crawlerInfo.CarrierCode, crawlerInfo.HeartBeatNo)
+						log.Printf("[INFO] Crawler %s(id=%d, carrier-code=%s, tracking-no=%s) is OK\n", crawlerInfo.Name, crawlerInfo.Id, crawlerInfo.CarrierCode, crawlerInfo.HeartBeatNo)
 					} else {
-						log.Printf("[WARN] Crawler %s(crawler-id=%d, carrier-code=%s, tracking-no=%s) has ERROR\n", crawlerInfo.Name, crawlerInfo.Id, crawlerInfo.CarrierCode, crawlerInfo.HeartBeatNo)
+						log.Printf("[WARN] Crawler %s(id=%d, carrier-code=%s, tracking-no=%s) has ERROR\n", crawlerInfo.Name, crawlerInfo.Id, crawlerInfo.CarrierCode, crawlerInfo.HeartBeatNo)
 					}
 
 					_db.SaveHealthLog(crawlerInfo.Id, ts.TrackingNo, int(timing), resultStatus, endTime, ts.AgentRawText, resultNote)
 				}
 			}
+
+			datePoint := time.Now().Add(-48 * time.Hour)
+			passingRatio := float32(.89)
+			go func() {
+				defer _utils.RecoverPanic()
+
+				// 每次执行爬虫监控之后，更新爬虫的当前状态。
+				for _, rc := range _db.CountHealthLogByResultStatus(datePoint) {
+					if crawlerInfo := findCrawlerInfo2_(rc.Id); crawlerInfo == nil {
+						continue
+					} else {
+						if float32(rc.CountOfOk)/float32(rc.CountOfOk+rc.CountOfError) >= passingRatio {
+							if _db.UpdateCrawlerInfoHealth(rc.Id, 1) > 0 {
+								log.Printf("[INFO] Update crawler %s(id=%d, carrier-code=%s) to OK\n", crawlerInfo.Name, crawlerInfo.Id, crawlerInfo.CarrierCode)
+							}
+						} else {
+							if _db.UpdateCrawlerInfoHealth(rc.Id, 0) > 0 {
+								log.Printf("[INFO] Update crawler %s(id=%d, carrier-code=%s) to ERROR\n", crawlerInfo.Name, crawlerInfo.Id, crawlerInfo.CarrierCode)
+							}
+						}
+					}
+				}
+			}()
 		}
 	}
 }
