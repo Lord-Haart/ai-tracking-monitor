@@ -118,7 +118,7 @@ func doCheck() {
 					if crawlerInfo := findCrawlerInfo2_(rc.Id); crawlerInfo == nil {
 						continue
 					} else {
-						if float32(rc.CountOfOk)/float32(rc.CountOfOk+rc.CountOfError) >= passingRatio {
+						if isPassed(rc.CountOfOk, rc.CountOfError, passingRatio) {
 							if _db.UpdateCrawlerInfoHealth(rc.Id, 1) > 0 {
 								log.Printf("[INFO] Update crawler %s(id=%d, carrier-code=%s) to OK\n", crawlerInfo.Name, crawlerInfo.Id, crawlerInfo.CarrierCode)
 							}
@@ -131,5 +131,14 @@ func doCheck() {
 				}
 			}()
 		}
+	}
+}
+
+func isPassed(countOfOk, countOfError int, passingRatio float32) bool {
+	countOfTotal := countOfOk + countOfError
+	if countOfTotal == 0 {
+		return true
+	} else {
+		return float32(countOfOk)/float32(countOfTotal) >= passingRatio
 	}
 }
